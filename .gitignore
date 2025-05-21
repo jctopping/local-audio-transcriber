@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+*.wav
+*.json
+*.srt
+diarize_env/
