@@ -1,6 +1,11 @@
-torch==1.13.1
-pyannote.audio==1.1.1
+# torch/torchaudio are installed first by setup.sh / setup.bat from the right
+# PyTorch index (ROCm, CUDA or CPU). Keep torch at 2.8: torchaudio 2.9 removed
+# APIs that pyannote.audio 3.x still uses.
+torch==2.8.*
+torchaudio==2.8.*
+pyannote.audio==3.4.*
+huggingface_hub<1.0
+openai-whisper==20250625
 tqdm
 ffmpeg-python
-git+https://github.com/openai/whisper.git
 python-dotenv
