@@ -85,9 +85,12 @@ setup.bat
 
 This will:
 
-* Create a virtual environment
-* Install dependencies
-* Copy `.env.sample` to `.env`
+* Detect your GPU (AMD via ROCm, NVIDIA via CUDA, otherwise CPU) and install the matching PyTorch build
+  (override with `TORCH=rocm|cuda|cpu ./setup.sh`)
+* Create a virtual environment and install dependencies (uses `uv` if available)
+* Copy `.env.sample` to `.env` if you don't already have one
+
+On Windows, `setup.bat` installs the CPU build by default; set `TORCH_INDEX` to a CUDA index to use an NVIDIA GPU.
 
 ---
 
@@ -97,9 +100,8 @@ This will:
 2. Generate a token: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
 3. Accept the model terms for:
 
-   * [pyannote/speaker-diarization](https://huggingface.co/pyannote/speaker-diarization)
-   * [pyannote/segmentation](https://huggingface.co/pyannote/segmentation)
-   * [pyannote/embedding](https://huggingface.co/pyannote/embedding)
+   * [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
+   * [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0)
 4. Open the `.env` file created during setup and paste your token:
 
 ```env
@@ -111,8 +113,10 @@ HUGGINGFACE_TOKEN=your_token_here
 ## How to Use
 
 ```bash
-python local_audio_transcriber.py <input_audio_file> [--force] [--srt]
+diarize_env/bin/python local-audio-transcriber.py <input_audio_file> [--force] [--srt]
 ```
+
+The Whisper model defaults to `turbo`; pick another with e.g. `WHISPER_MODEL=medium`.
 
 ### Options
 
@@ -124,7 +128,7 @@ python local_audio_transcriber.py <input_audio_file> [--force] [--srt]
 ### Example
 
 ```bash
-python local_audio_transcriber.py "interview.m4a" --srt
+python local-audio-transcriber.py "interview.m4a" --srt
 ```
 
 ---
@@ -136,7 +140,7 @@ For `interview.m4a`, you'll get:
 | File                                       | Description                                |
 | ------------------------------------------ | ------------------------------------------ |
 | `interview_<hash>.wav`                     | Converted audio file                       |
-| `interview_<hash>_whisper_transcript.json` | Whisper transcription cache                |
+| `interview_<hash>_whisper_<model>_transcript.json` | Whisper transcription cache (model set via `WHISPER_MODEL`, default `turbo`) |
 | `interview_<hash>_diarized_transcript.txt` | Speaker-labeled transcript with timestamps |
 | `interview_<hash>_diarized_transcript.srt` | Subtitles (if `--srt` is used)             |
 
@@ -146,7 +150,7 @@ For `interview.m4a`, you'll get:
 
 ```
 local-audio-transcriber/
-├── local_audio_transcriber.py   # Main script
+├── local-audio-transcriber.py   # Main script
 ├── .env                         # Hugging Face token (not committed)
 ├── .env.sample                  # Template for creating .env
 ├── setup.sh                     # Installer for macOS/Linux
@@ -161,19 +165,15 @@ local-audio-transcriber/
 
 ## Troubleshooting
 
-**ImportError: `Pipeline` not found**
-You're likely using `pyannote.audio >= 2.0`. Downgrade to the supported version:
+**`Failed to load diarization model`**
+Your Hugging Face token is missing or you haven't accepted the terms for both models listed in step 3.
 
-```bash
-pip install pyannote.audio==1.1.1
-```
+**AMD GPU not used (`Using device: cpu`)**
+Re-run `TORCH=rocm ./setup.sh`. Your user needs access to `/dev/kfd` and `/dev/dri/renderD*`.
+The first GPU run is slower while MIOpen builds its kernel cache in `~/.cache/miopen`.
 
-**torch install fails**
-Use a compatible version for `pyannote.audio==1.1.1`:
-
-```bash
-pip install torch==1.13.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
-```
+**`amdgpu.ids: No such file or directory`**
+Harmless; it's only the lookup for the GPU's marketing name.
 
 ---
 
