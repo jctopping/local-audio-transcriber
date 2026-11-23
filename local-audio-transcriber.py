@@ -98,6 +98,29 @@ else:
         json.dump(result, f)
     print(f"Transcription completed and saved in {time.time() - start_time:.1f} seconds")
 
+# --------------------------- Hallucination Cleanup --------------------------- #
+
+def clean_segments(segments, audio_duration, max_repeats=2):
+    """Drop Whisper's typical hallucinations: segments starting past the end of the
+    audio, and runs of identical consecutive lines (e.g. "Oh." x20 over trailing
+    music or laughter), keeping at most `max_repeats` of each run."""
+    cleaned, run_text, run_len = [], None, 0
+    for seg in segments:
+        if seg["start"] >= audio_duration:
+            continue
+        text = seg["text"].strip().lower()
+        run_len = run_len + 1 if text == run_text else 1
+        run_text = text
+        if run_len <= max_repeats:
+            cleaned.append(seg)
+    return cleaned
+
+audio_duration = whisper.audio.load_audio(str(converted_wav)).shape[0] / whisper.audio.SAMPLE_RATE
+n_before = len(result["segments"])
+result["segments"] = clean_segments(result["segments"], audio_duration)
+if len(result["segments"]) < n_before:
+    print(f"Removed {n_before - len(result['segments'])} repeated/out-of-range segments (likely hallucinations)")
+
 # --------------------------- Pyannote Diarization --------------------------- #
 
 print("Loading speaker diarization pipeline...")
